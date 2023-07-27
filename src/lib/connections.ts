@@ -44,7 +44,7 @@ export class Connection extends EventEmitter {
                 this.emitter.removeListener(joinStr, listener);
                 if (this.joinState !== JoinState.JOINED) {
                     this.joinState = JoinState.NOT_JOINED;
-                    this.close();
+                    this.close(4001, "timeout");
                 }
             }, 10_000);
 
@@ -109,7 +109,7 @@ export class Connection extends EventEmitter {
                     // eslint-disable-next-line no-fallthrough
                     case "PART":
                         this.joinState = JoinState.NOT_JOINED;
-                        this.close();
+                        this.close(4000, "part");
                         break;
                     case "PRIVMSG": {
                         this.emit("PRIVMSG", message);
@@ -124,8 +124,8 @@ export class Connection extends EventEmitter {
         this.ws = ws;
     }
 
-    close() {
-        this.ws.close();
+    close(code?: number, data?: string) {
+        this.ws.close(code, data);
     }
 }
 

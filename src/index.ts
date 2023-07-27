@@ -5,7 +5,7 @@ import Express, { Request, Response, json } from "express";
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 const connections: Map<string, Connection> = new Map();
-const connectionQueue = new Queue(150, 10_000);
+const connectionQueue = new Queue(800, 10_000);
 
 const middleware = [json()];
 
@@ -33,8 +33,9 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     for (const channel of batch) {
         const conn = new Connection(channel);
         
-        conn.addListener("close", () => {
-            console.log("CLOSE:", channel);
+        conn.addListener("close", ({code, reason}) => {
+                console.log("CLOSE:", channel, {code, reason: reason.toString()});
+
             connections.delete(channel);
         });
         
@@ -49,3 +50,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
         connections.set(channel, conn);
     }
 })
+
+setInterval(() => {
+    console.log("[CONNECTIONS] Size:", connections.size);
+}, 10_000)
