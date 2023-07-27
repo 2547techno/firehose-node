@@ -3,12 +3,7 @@
     "parser": "@typescript-eslint/parser",
     "plugins": ["@typescript-eslint"],
     "root": true,
-    "ignorePatterns": [
-        "node_modules/**/*",
-        "out/**/*",
-        "boringssl/**/*",
-        "bin/**/*"
-    ],
+    "ignorePatterns": ["node_modules/**/*", "out/**/*", "tools/**/*"],
     "rules": {
         "@typescript-eslint/no-unused-vars": [
             "warn",

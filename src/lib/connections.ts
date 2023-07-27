@@ -18,43 +18,43 @@ type Channel = {
     name: string;
     state: JoinState;
     messageCount: number;
-}
+};
 
 export class Connection extends EventEmitter {
-    emitter;
+    events;
     ws;
     channels;
 
-    constructor(channels: string[]) {
+    constructor(channelNames: string[]) {
         super();
         this.channels = new Map<string, Channel>();
 
-        this.emitter = new EventEmitter();
+        this.events = new EventEmitter();
 
         const ws = new WebSocket("wss://irc-ws.chat.twitch.tv", {
             port: 443,
         });
 
-        this.emitter.on("join", channelName => {
-            const channel = this.channels.get(channelName)
+        this.events.on("join", (channelName) => {
+            const channel = this.channels.get(channelName);
             if (!channel) return;
 
             channel.state = JoinState.JOINED;
             this.emit("join", channelName);
-        })
+        });
 
-        this.emitter.on("channelSuspended", channelName => {
-            this.channels.delete(channelName)
+        this.events.on("channelSuspended", (channelName) => {
+            this.channels.delete(channelName);
             this.emit("channelSuspended", channelName);
-        })
+        });
 
-        this.emitter.on("channelTimeout", channelName => {
+        this.events.on("channelTimeout", (channelName) => {
             this.emit("channelTimeout", channelName);
-        })
+        });
 
-        this.emitter.on("PRIVMSG", message => {
+        this.events.on("PRIVMSG", (message) => {
             this.emit("PRIVMSG", message);
-        })
+        });
 
         ws.on("open", async () => {
             const auth = {
@@ -65,24 +65,24 @@ export class Connection extends EventEmitter {
             ws.send(`NICK ${auth.nick}`);
             ws.send("CAP REQ :twitch.tv/commands twitch.tv/tags");
 
-            for (const c of channels) {
+            for (const c of channelNames) {
                 const channelName = c.toLowerCase();
                 if (this.channels.has(channelName)) continue;
-                let channel = {
+                const channel = {
                     name: channelName,
                     state: JoinState.JOINING,
                     messageCount: 0,
-                }
-                this.channels.set(channelName, channel)
+                };
+                this.channels.set(channelName, channel);
 
                 ws.send(`JOIN #${channelName}`);
 
                 setTimeout(() => {
                     if (channel.state !== JoinState.JOINED) {
                         this.channels.delete(channelName);
-                        this.emitter.emit("channelTimeout", channelName);
+                        this.events.emit("channelTimeout", channelName);
                     }
-                }, 10_000)
+                }, 10_000);
             }
         });
 
@@ -120,12 +120,12 @@ export class Connection extends EventEmitter {
                     case "376":
                         break;
                     case "JOIN": {
-                        const channelName = message.param.slice(1)
+                        const channelName = message.param.slice(1);
                         const channel = this.channels.get(channelName);
                         if (channel) {
-                            this.emitter.emit("join", channelName);
+                            this.events.emit("join", channelName);
                         }
-                        
+
                         break;
                     }
                     case "PING": {
@@ -133,8 +133,13 @@ export class Connection extends EventEmitter {
                         break;
                     }
                     case "NOTICE": {
-                        if (message.tags["msg-id"] === "msg_channel_suspended") {
-                            this.emitter.emit("channelSuspended", message.param.slice(1))
+                        if (
+                            message.tags["msg-id"] === "msg_channel_suspended"
+                        ) {
+                            this.events.emit(
+                                "channelSuspended",
+                                message.param.slice(1)
+                            );
                         }
                         break;
                     }
@@ -144,7 +149,7 @@ export class Connection extends EventEmitter {
                         break;
                     }
                     case "PRIVMSG": {
-                        this.emitter.emit("PRIVMSG", message);
+                        this.events.emit("PRIVMSG", message);
                         break;
                     }
                     default:
@@ -174,24 +179,24 @@ export class Queue extends EventEmitter {
         this.intervalMs = intervalMs;
         this.q = [];
         this.lastBatch = new Date().getTime();
-        
+
         this.qInterval = setInterval(() => {
             const now = new Date().getTime();
             if (now - this.lastBatch >= this.intervalMs) {
-                const batch = []
-                for(let i = 0; i < this.batchSize; i++) {
-                    let channel = this.q.shift()
-                    if (!channel) continue
+                const batch = [];
+                for (let i = 0; i < this.batchSize; i++) {
+                    const channel = this.q.shift();
+                    if (!channel) continue;
 
                     batch.push(channel);
                 }
-                
+
                 this.lastBatch = now;
                 if (batch.length > 0) {
                     this.emit("batch", batch);
                 }
             }
-        }, 250)
+        }, 250);
     }
 
     push(channel: string) {
