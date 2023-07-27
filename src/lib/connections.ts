@@ -43,12 +43,18 @@ export class Connection extends EventEmitter {
             this.emit("join", channelName);
         });
 
+        this.events.on("part", (channelName) => {
+            this.channels.delete(channelName);
+            this.emit("part", channelName);
+        });
+
         this.events.on("channelSuspended", (channelName) => {
             this.channels.delete(channelName);
             this.emit("channelSuspended", channelName);
         });
 
         this.events.on("channelTimeout", (channelName) => {
+            this.channels.delete(channelName);
             this.emit("channelTimeout", channelName);
         });
 
@@ -79,7 +85,6 @@ export class Connection extends EventEmitter {
 
                 setTimeout(() => {
                     if (channel.state !== JoinState.JOINED) {
-                        this.channels.delete(channelName);
                         this.events.emit("channelTimeout", channelName);
                     }
                 }, 10_000);
@@ -144,8 +149,7 @@ export class Connection extends EventEmitter {
                         break;
                     }
                     case "PART": {
-                        console.log(message);
-                        console.log("PART");
+                        this.events.emit("part", message.param.slice(1));
                         break;
                     }
                     case "PRIVMSG": {
@@ -163,6 +167,18 @@ export class Connection extends EventEmitter {
 
     getChannelCount() {
         return this.channels.size;
+    }
+
+    partChannel(channelName: string) {
+        if (this.channels.has(channelName)) {
+            this.ws.send(`PART #${channelName.toLowerCase()}`);
+        }
+    }
+
+    partChannels(channelNames: string[]) {
+        for (const channelName of channelNames) {
+            this.partChannel(channelName);
+        }
     }
 }
 
