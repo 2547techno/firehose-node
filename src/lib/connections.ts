@@ -35,6 +35,27 @@ export class Connection extends EventEmitter {
             port: 443,
         });
 
+        this.emitter.on("join", channelName => {
+            const channel = this.channels.get(channelName)
+            if (!channel) return;
+
+            channel.state = JoinState.JOINED;
+            this.emit("join", channelName);
+        })
+
+        this.emitter.on("channelSuspended", channelName => {
+            this.channels.delete(channelName)
+            this.emit("channelSuspended", channelName);
+        })
+
+        this.emitter.on("channelTimeout", channelName => {
+            this.emit("channelTimeout", channelName);
+        })
+
+        this.emitter.on("PRIVMSG", message => {
+            this.emit("PRIVMSG", message);
+        })
+
         ws.on("open", async () => {
             const auth = {
                 nick: "justinfan123",
@@ -45,16 +66,23 @@ export class Connection extends EventEmitter {
             ws.send("CAP REQ :twitch.tv/commands twitch.tv/tags");
 
             for (const c of channels) {
-                const channel = c.toLowerCase();
-                if (this.channels.has(channel)) continue;
-                this.channels.set(channel, {
-                    name: channel,
+                const channelName = c.toLowerCase();
+                if (this.channels.has(channelName)) continue;
+                let channel = {
+                    name: channelName,
                     state: JoinState.JOINING,
                     messageCount: 0,
-                })
+                }
+                this.channels.set(channelName, channel)
 
-                const joinStr = `JOIN #${channel}`;
-                ws.send(joinStr);
+                ws.send(`JOIN #${channelName}`);
+
+                setTimeout(() => {
+                    if (channel.state !== JoinState.JOINED) {
+                        this.channels.delete(channelName);
+                        this.emitter.emit("channelTimeout", channelName);
+                    }
+                }, 10_000)
             }
         });
 
@@ -92,10 +120,10 @@ export class Connection extends EventEmitter {
                     case "376":
                         break;
                     case "JOIN": {
-                        const channel = this.channels.get(message.param.slice(1));
+                        const channelName = message.param.slice(1)
+                        const channel = this.channels.get(channelName);
                         if (channel) {
-                            channel.state = JoinState.JOINED;
-                            this.emit("join", message.param.slice(1));
+                            this.emitter.emit("join", channelName);
                         }
                         
                         break;
@@ -106,7 +134,7 @@ export class Connection extends EventEmitter {
                     }
                     case "NOTICE": {
                         if (message.tags["msg-id"] === "msg_channel_suspended") {
-                            this.emit("channelSuspended", message.param.slice(1))
+                            this.emitter.emit("channelSuspended", message.param.slice(1))
                         }
                         break;
                     }
@@ -116,7 +144,7 @@ export class Connection extends EventEmitter {
                         break;
                     }
                     case "PRIVMSG": {
-                        this.emit("PRIVMSG", message);
+                        this.emitter.emit("PRIVMSG", message);
                         break;
                     }
                     default:

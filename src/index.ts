@@ -5,7 +5,8 @@ import Express, { Request, Response, json } from "express";
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 const connections: Connection[] = [];
-const connectionQueue = new Queue(200, 10_000);
+const connectionQueue = new Queue(1000, 10_000);
+const suspendedChannels = new Set<string>();
 
 const middleware = [json()];
 
@@ -33,20 +34,29 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     
     conn.addListener("close", ({code, reason}) => {
         const i = connections.indexOf(conn);
-        console.log(`[CONNECTION] Close connections[${i}]`);
+        console.log(`\n[CONNECTION] Close connections[${i}]`);
         connections.slice(i, 1);
     });
     
     conn.addListener("join", channel => {
-        // console.log(`JOINED #${channel}`);
+        // console.log(`\nJOINED #${channel}`);
     });
     
     conn.addListener("channelSuspended", channel => {
-        console.log(`SUSPENDED #${channel}`);
+        console.log(`\nSUSPENDED #${channel}`);
+        suspendedChannels.add(channel);
+        setTimeout(() => {
+            suspendedChannels.delete(channel)
+        }, 60_000);
+    });
+    
+    conn.addListener("channelTimeout", channel => {
+        if (suspendedChannels.has(channel)) return
+        console.log(`\nTIMEOUT #${channel}`);
     });
     
     conn.addListener("PRIVMSG", (message: IRCMessage) => {
-        // console.log(new Date().toLocaleString(), message.raw, "\n");
+        // console.log("\n", new Date().toLocaleString(), message.raw, "\n");
     });
     
     connections.push(conn);
@@ -58,7 +68,7 @@ setInterval(() => {
         channelCount += conn.getChannelCount();
     }
 
+    process.stdout.cursorTo(0);
     process.stdout.clearLine(0);
     process.stdout.write(`[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount}`);
-    process.stdout.cursorTo(0);
 }, 5_000)
