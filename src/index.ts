@@ -1,11 +1,12 @@
 import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import Express, { Request, Response, json } from "express";
+import { readFileSync } from "fs";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 const connections: Connection[] = [];
-const connectionQueue = new Queue(1000, 10_000);
+const connectionQueue = new Queue(500, 6_000);
 const suspendedChannels = new Set<string>();
 
 const middleware = [json()];
@@ -102,6 +103,15 @@ setInterval(() => {
     process.stdout.cursorTo(0);
     process.stdout.clearLine(0);
     process.stdout.write(
-        `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount}`
+        `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount} | Queue Size: ${connectionQueue.q.length}`
     );
 }, 5_000);
+
+if (process.env.FILE) {
+    console.log("[FILE] Load channels file:", process.env.FILE);
+    const file = readFileSync(process.env.FILE);
+    const channelNames = file.toString().split("\n");
+    for (const channelName of channelNames) {
+        connectionQueue.push(channelName);
+    }
+}
