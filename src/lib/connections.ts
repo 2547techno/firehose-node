@@ -52,10 +52,9 @@ export class Connection extends EventEmitter {
                 if (this.channel === channel.toLowerCase()) {
                     this.joinState = JoinState.JOINED;
                     clearTimeout(timeout);
-                    console.log(`JOINED #${this.channel}`);
                 }
             };
-            this.emitter.addListener("joinMessage", listener);
+            this.emitter.addListener("join", listener);
         });
 
         ws.on("error", console.error);
@@ -78,6 +77,9 @@ export class Connection extends EventEmitter {
                 switch (message.command) {
                     case "CAP":
                     case "ROOMSTATE":
+                    case "USERNOTICE":
+                    case "CLEARCHAT":
+                    case "CLEARMSG":
                     case "001":
                     case "002":
                     case "003":
@@ -90,9 +92,10 @@ export class Connection extends EventEmitter {
                         break;
                     case "JOIN":
                         this.emitter.emit(
-                            "joinMessage",
+                            "join",
                             message.param.slice(1)
                         );
+                        this.emit("join");
                         break;
                     case "PING":
                         ws.send(`PONG :${message.params.join(" ")}`);
@@ -123,5 +126,43 @@ export class Connection extends EventEmitter {
 
     close() {
         this.ws.close();
+    }
+}
+
+export class Queue extends EventEmitter {
+    batchSize;
+    intervalMs;
+    q: string[];
+    lastBatch;
+    qInterval;
+
+    constructor(batchSize: number, intervalMs: number) {
+        super();
+        this.batchSize = batchSize;
+        this.intervalMs = intervalMs;
+        this.q = [];
+        this.lastBatch = new Date().getTime();
+        
+        this.qInterval = setInterval(() => {
+            const now = new Date().getTime();
+            if (now - this.lastBatch >= this.intervalMs) {
+                const batch = []
+                for(let i = 0; i < this.batchSize; i++) {
+                    let channel = this.q.shift()
+                    if (!channel) continue
+
+                    batch.push(channel);
+                }
+                
+                this.lastBatch = now;
+                if (batch.length > 0) {
+                    this.emit("batch", batch);
+                }
+            }
+        }, 250)
+    }
+
+    push(channel: string) {
+        this.q.push(channel);
     }
 }
