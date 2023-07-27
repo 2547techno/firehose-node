@@ -8,6 +8,12 @@ export enum JoinState {
     NOT_JOINED,
 }
 
+export enum WebSocketCloseCode {
+    PART = 4000,
+    TIMEOUT = 4001,
+    CHANNEL_SUSPENDED = 4002,
+}
+
 export class Connection extends EventEmitter {
     emitter;
     ws;
@@ -44,7 +50,7 @@ export class Connection extends EventEmitter {
                 this.emitter.removeListener(joinStr, listener);
                 if (this.joinState !== JoinState.JOINED) {
                     this.joinState = JoinState.NOT_JOINED;
-                    this.close(4001, "timeout");
+                    this.close(WebSocketCloseCode.TIMEOUT, "timeout");
                 }
             }, 10_000);
 
@@ -101,15 +107,13 @@ export class Connection extends EventEmitter {
                         ws.send(`PONG :${message.params.join(" ")}`);
                         break;
                     case "NOTICE":
-                        if (
-                            message.tags["msg-id"] !== "msg_channel_suspended"
-                        ) {
-                            break;
+                        if (message.tags["msg-id"] === "msg_channel_suspended") {
+                            this.close(WebSocketCloseCode.CHANNEL_SUSPENDED, "channel suspended");
                         }
-                    // eslint-disable-next-line no-fallthrough
+                        break;
                     case "PART":
                         this.joinState = JoinState.NOT_JOINED;
-                        this.close(4000, "part");
+                        this.close(WebSocketCloseCode.PART, "part");
                         break;
                     case "PRIVMSG": {
                         this.emit("PRIVMSG", message);

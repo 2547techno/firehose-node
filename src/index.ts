@@ -1,4 +1,4 @@
-import { Connection, Queue } from "./lib/connections";
+import { Connection, Queue, WebSocketCloseCode } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import Express, { Request, Response, json } from "express";
 
@@ -34,7 +34,20 @@ connectionQueue.addListener("batch", (batch: string[]) => {
         const conn = new Connection(channel);
         
         conn.addListener("close", ({code, reason}) => {
-                console.log("CLOSE:", channel, {code, reason: reason.toString()});
+            switch(code as WebSocketCloseCode) {
+                case WebSocketCloseCode.PART:
+                    console.log("PART:", channel);
+                    break;
+                case WebSocketCloseCode.TIMEOUT:
+                    console.log("TIMEOUT:", channel);
+                    break;
+                case WebSocketCloseCode.CHANNEL_SUSPENDED:
+                    console.log("SUSPENDED:", channel);
+                    break;
+                default:
+                    console.log("CLOSE:", channel, code);
+                    break;
+            }
 
             connections.delete(channel);
         });
@@ -52,5 +65,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 })
 
 setInterval(() => {
-    console.log("[CONNECTIONS] Size:", connections.size);
-}, 10_000)
+    process.stdout.clearLine(0);
+    process.stdout.write(`[CONNECTIONS] Size: ${connections.size}`);
+    process.stdout.cursorTo(0);
+}, 5_000)
