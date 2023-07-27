@@ -1,25 +1,40 @@
-import { Connection, Queue, WebSocketCloseCode } from "./lib/connections";
+import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import Express, { Request, Response, json } from "express";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
-const connections: Map<string, Connection> = new Map();
-const connectionQueue = new Queue(800, 10_000);
+const connections: Connection[] = [];
+const connectionQueue = new Queue(1000, 10_000);
+const suspendedChannels = new Set<string>();
 
 const middleware = [json()];
 
 app.post("/channels", middleware, (req: Request, res: Response) => {
-    const channels: string[] = req.body.channels;
-    if (!channels) {
+    const channelNames: string[] = req.body.channels;
+    if (!channelNames) {
         return res.status(400).json({
             message: "missing `channels` field",
         });
     }
 
-    for (const channel of channels) {
-        if (connections.has(channel)) continue;
-        connectionQueue.push(channel);
+    for (const channelName of channelNames) {
+        connectionQueue.push(channelName);
+    }
+
+    res.send();
+});
+
+app.delete("/channels", middleware, (req: Request, res: Response) => {
+    const channelNames: string[] = req.body.channels;
+    if (!channelNames) {
+        return res.status(400).json({
+            message: "missing `channels` field",
+        });
+    }
+
+    for (const conn of connections) {
+        conn.partChannels(channelNames);
     }
 
     res.send();
@@ -30,42 +45,63 @@ app.listen(PORT, () => {
 });
 
 connectionQueue.addListener("batch", (batch: string[]) => {
-    for (const channel of batch) {
-        const conn = new Connection(channel);
-        
-        conn.addListener("close", ({code, reason}) => {
-            switch(code as WebSocketCloseCode) {
-                case WebSocketCloseCode.PART:
-                    console.log("PART:", channel);
-                    break;
-                case WebSocketCloseCode.TIMEOUT:
-                    console.log("TIMEOUT:", channel);
-                    break;
-                case WebSocketCloseCode.CHANNEL_SUSPENDED:
-                    console.log("SUSPENDED:", channel);
-                    break;
-                default:
-                    console.log("CLOSE:", channel, code);
-                    break;
-            }
+    const conn = new Connection(batch);
 
-            connections.delete(channel);
-        });
-        
-        conn.addListener("join", () => {
-            // console.log(`JOINED #${channel}`);
-        });
-        
-        conn.addListener("PRIVMSG", (message: IRCMessage) => {
-            // console.log(new Date().toLocaleString(), message.raw, "\n");
-        });
-        
-        connections.set(channel, conn);
-    }
-})
+    conn.addListener("close", ({ code }) => {
+        const i = connections.indexOf(conn);
+        console.log(`\n[CONNECTION] Close connections[${i}] | code: ${code}`);
+        connections.splice(i, 1);
+    });
+
+    conn.addListener("join", (channelName) => {
+        // console.log(`\nJOINED #${channelName}`);
+    });
+
+    conn.addListener("part", (channelName) => {
+        console.log(`\nPART #${channelName}`);
+        if (conn.getChannelCount() === 0) {
+            connections.splice(connections.indexOf(conn), 1);
+        }
+    });
+
+    conn.addListener("channelSuspended", (channelName) => {
+        console.log(`\nSUSPENDED #${channelName}`);
+        suspendedChannels.add(channelName);
+
+        if (conn.getChannelCount() === 0) {
+            connections.splice(connections.indexOf(conn), 1);
+        }
+
+        setTimeout(() => {
+            suspendedChannels.delete(channelName);
+        }, 60_000);
+    });
+
+    conn.addListener("channelTimeout", (channelName) => {
+        if (suspendedChannels.has(channelName)) return;
+        console.log(`\nTIMEOUT #${channelName}`);
+
+        if (conn.getChannelCount() === 0) {
+            connections.splice(connections.indexOf(conn), 1);
+        }
+    });
+
+    conn.addListener("PRIVMSG", (message: IRCMessage) => {
+        // console.log("\n", new Date().toLocaleString(), message.raw, "\n");
+    });
+
+    connections.push(conn);
+});
 
 setInterval(() => {
-    process.stdout.clearLine(0);
-    process.stdout.write(`[CONNECTIONS] Size: ${connections.size}`);
+    let channelCount = 0;
+    for (const conn of connections) {
+        channelCount += conn.getChannelCount();
+    }
+
     process.stdout.cursorTo(0);
-}, 5_000)
+    process.stdout.clearLine(0);
+    process.stdout.write(
+        `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount}`
+    );
+}, 5_000);
