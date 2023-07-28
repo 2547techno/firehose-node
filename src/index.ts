@@ -96,14 +96,14 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("part", (channelName) => {
-        // console.log(`\nPART #${channelName}`);
+        console.log(`\nPART #${channelName}`);
         if (conn.getChannelCount() === 0) {
             connections.splice(connections.indexOf(conn), 1);
         }
     });
 
     conn.addListener("channelSuspended", (channelName) => {
-        // console.log(`\nSUSPENDED #${channelName}`);
+        console.log(`\nSUSPENDED #${channelName}`);
         suspendedChannels.add(channelName);
 
         if (conn.getChannelCount() === 0) {
