@@ -136,9 +136,12 @@ setInterval(() => {
         channelCount += conn.getChannelCount();
     }
 
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(0);
-    process.stdout.write(
+    // process.stdout.cursorTo(0);
+    // process.stdout.clearLine(0);
+    // process.stdout.write(
+    //     `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount} | Queue Size: ${connectionQueue.q.length}`
+    // );
+    console.log(
         `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount} | Queue Size: ${connectionQueue.q.length}`
     );
 }, 5_000);
