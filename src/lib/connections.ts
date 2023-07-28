@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import WebSocket from "ws";
 import { parse } from "irc-message-ts";
+import { config } from "./config";
 
 export enum JoinState {
     JOINED,
@@ -187,7 +188,7 @@ export class Connection extends EventEmitter {
             if (channel.state !== JoinState.JOINED) {
                 this.events.emit("channelTimeout", channelName);
             }
-        }, 10_000);
+        }, config.connections.joinTimeout);
     }
 
     joinChannels(channelNames: string[]) {

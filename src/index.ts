@@ -9,10 +9,10 @@ import amqplib from "amqplib/callback_api";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
-const MAX_CHANNELS_PER_CONNECTIONS = 500;
-const QUEUE_NAME = "firehose-message";
+const MAX_CHANNELS_PER_CONNECTIONS = config.connections.maxChannels;
+const QUEUE_NAME = config.amqp.queueName;
 const connections: Connection[] = [];
-const connectionQueue = new Queue(MAX_CHANNELS_PER_CONNECTIONS, 6_000);
+const connectionQueue = new Queue(MAX_CHANNELS_PER_CONNECTIONS, config.connections.queueInterval);
 const suspendedChannels = new Set<string>();
 const listGenerator = new EventEmitter();
 const messageEvent = new EventEmitter();
