@@ -2,10 +2,9 @@ import { URLSearchParams } from "url";
 import { writeFileSync } from "fs";
 import { config } from "./config";
 
-const token = config.twitch.token;
-const cid = config.twitch.cid;
-// const CHANNEL_LIMIT = 150000;
-const CHANNEL_LIMIT = 2000;
+const TOKEN = config.twitch.token;
+const CID = config.twitch.cid;
+const CHANNEL_LIMIT = config.twitch.list.max;
 
 async function getStreams(cursor: string) {
     const url = new URL("https://api.twitch.tv/helix/streams");
@@ -21,8 +20,8 @@ async function getStreams(cursor: string) {
 
     const res = await fetch(url, {
         headers: {
-            authorization: `Bearer ${token}`,
-            "client-id": cid,
+            authorization: `Bearer ${TOKEN}`,
+            "client-id": CID,
         },
     });
 
