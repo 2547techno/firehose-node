@@ -206,7 +206,7 @@ async function updateStreams() {
     console.log("[STREAMS] Added", count, "channels to queue");
 }
 
-if (process.env.STANDALONE) {
+if (process.env.STANDALONE_LIST) {
     const initalDelay = config.twitch.streamsDelay.initial;
     const intervalDelay = config.twitch.streamsDelay.interval;
 
