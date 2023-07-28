@@ -5,14 +5,17 @@ import { readFileSync } from "fs";
 import { getAllStreams } from "./lib/streams";
 import { EventEmitter } from "events";
 import { config } from "./lib/config";
+import amqplib from "amqplib/callback_api";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 const MAX_CHANNELS_PER_CONNECTIONS = 500;
+const QUEUE_NAME = "firehose-message";
 const connections: Connection[] = [];
 const connectionQueue = new Queue(MAX_CHANNELS_PER_CONNECTIONS, 6_000);
 const suspendedChannels = new Set<string>();
 const listGenerator = new EventEmitter();
+const messageEvent = new EventEmitter();
 
 const middleware = [json()];
 
@@ -49,6 +52,25 @@ app.delete("/channels", middleware, (req: Request, res: Response) => {
 app.listen(PORT, () => {
     console.log(`[EXPRESS] Listening on ${PORT}`);
 });
+
+amqplib.connect(
+    `amqp://${config.amqp.user}:${config.amqp.password}@${config.amqp.url}`,
+    (err, conn: amqplib.Connection) => {
+        if (err) throw err;
+        console.log("[AMQP] Connected to server");
+
+        conn.createChannel((err, channel: amqplib.Channel) => {
+            if (err) throw err;
+            console.log("[AMQP] Connected to queue", QUEUE_NAME);
+
+            channel.assertQueue(QUEUE_NAME);
+
+            messageEvent.on("message", (message: string) => {
+                channel.sendToQueue(QUEUE_NAME, Buffer.from(message));
+            });
+        });
+    }
+);
 
 connectionQueue.addListener("batch", (batch: string[]) => {
     for (const connection of connections) {
@@ -102,6 +124,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     conn.addListener("PRIVMSG", (message: IRCMessage) => {
         // console.log("\n", new Date().toLocaleString(), message.raw, "\n");
+        messageEvent.emit("message", message.raw);
     });
 
     connections.push(conn);
