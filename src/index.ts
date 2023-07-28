@@ -12,9 +12,11 @@ const PORT = process.env.PORT ?? 3001;
 const MAX_CHANNELS_PER_CONNECTIONS = config.connections.maxChannels;
 const QUEUE_NAME = config.amqp.queueName;
 const connections: Connection[] = [];
-const connectionQueue = new Queue(MAX_CHANNELS_PER_CONNECTIONS, config.connections.queueInterval);
+const connectionQueue = new Queue(
+    MAX_CHANNELS_PER_CONNECTIONS,
+    config.connections.queueInterval
+);
 const suspendedChannels = new Set<string>();
-const listGenerator = new EventEmitter();
 const messageEvent = new EventEmitter();
 
 const middleware = [json()];
@@ -136,11 +138,6 @@ setInterval(() => {
         channelCount += conn.getChannelCount();
     }
 
-    // process.stdout.cursorTo(0);
-    // process.stdout.clearLine(0);
-    // process.stdout.write(
-    //     `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount} | Queue Size: ${connectionQueue.q.length}`
-    // );
     console.log(
         `[CONNECTIONS] Size: ${connections.length} | Channels: ${channelCount} | Queue Size: ${connectionQueue.q.length}`
     );
@@ -164,66 +161,48 @@ if (process.env.FILE) {
     }
 }
 
-async function delay(ms: number) {
-    return new Promise<void>((res) => {
-        setTimeout(() => {
-            return res();
-        }, ms);
-    });
-}
-
 async function updateStreams() {
-    console.log("[STREAMS] Generating list of live streams");
-    const channelNames = await getAllStreams();
-    console.log(
-        "[STREAMS] Generated list of live streams | Count:",
-        channelNames.size
-    );
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        console.log("[STREAMS] Generating list of live streams");
+        const channelNames = await getAllStreams();
+        console.log(
+            "[STREAMS] Generated list of live streams | Count:",
+            channelNames.size
+        );
 
-    const connectedChannels = new Set<string>();
-    for (const conn of connections) {
-        for (const channel of conn.channels.keys()) {
-            connectedChannels.add(channel);
+        const connectedChannels = new Set<string>();
+        for (const conn of connections) {
+            for (const channel of conn.channels.keys()) {
+                connectedChannels.add(channel);
+            }
         }
-    }
 
-    const channelsToPart: string[] = [];
-    for (const connectedChannel of connectedChannels) {
-        if (!channelNames.has(connectedChannel)) {
-            channelsToPart.push(connectedChannel);
+        const channelsToPart: string[] = [];
+        for (const connectedChannel of connectedChannels) {
+            if (!channelNames.has(connectedChannel)) {
+                channelsToPart.push(connectedChannel);
+            }
         }
-    }
 
-    for (const conn of connections) {
-        conn.partChannels(channelsToPart);
-    }
-    console.log("[STREAMS] Parting", channelsToPart.length, "channels");
-
-    let count = 0;
-    for (const channelName of channelNames) {
-        if (!connectedChannels.has(channelName)) {
-            connectionQueue.push(channelName);
-            count++;
+        for (const conn of connections) {
+            conn.partChannels(channelsToPart);
         }
+        console.log("[STREAMS] Parting", channelsToPart.length, "channels");
+
+        let count = 0;
+        for (const channelName of channelNames) {
+            if (!connectedChannels.has(channelName)) {
+                connectionQueue.push(channelName);
+                count++;
+            }
+        }
+        console.log("[STREAMS] Added", count, "channels to queue");
+        await connectionQueue.waitUntilEmpty();
+        console.log("[STREAMS] Queue empty");
     }
-    console.log("[STREAMS] Added", count, "channels to queue");
 }
 
 if (process.env.STANDALONE_LIST) {
-    const initalDelay = config.twitch.streamsDelay.initial;
-    const intervalDelay = config.twitch.streamsDelay.interval;
-
-    listGenerator.on("generate", async () => {
-        await updateStreams();
-        console.log(`[STREAMS] ${intervalDelay / 1000}s cooldown`);
-        await delay(intervalDelay);
-        listGenerator.emit("generate");
-    });
-
-    updateStreams()
-        .then(() => {
-            console.log(`[STREAMS] Initial cooldown ${initalDelay / 1000}s`);
-            return delay(initalDelay);
-        })
-        .then(() => listGenerator.emit("generate"));
+    updateStreams();
 }

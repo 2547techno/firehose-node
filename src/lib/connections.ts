@@ -208,6 +208,7 @@ export class Queue extends EventEmitter {
     q: string[];
     lastBatch;
     qInterval;
+    events;
 
     constructor(batchSize: number, intervalMs: number) {
         super();
@@ -215,6 +216,7 @@ export class Queue extends EventEmitter {
         this.intervalMs = intervalMs;
         this.q = [];
         this.lastBatch = new Date().getTime();
+        this.events = new EventEmitter();
 
         this.qInterval = setInterval(() => {
             const now = new Date().getTime();
@@ -230,6 +232,8 @@ export class Queue extends EventEmitter {
                 this.lastBatch = now;
                 if (batch.length > 0) {
                     this.emit("batch", batch);
+                } else {
+                    this.events.emit("empty");
                 }
             }
         }, 250);
@@ -237,5 +241,11 @@ export class Queue extends EventEmitter {
 
     push(channel: string) {
         this.q.push(channel);
+    }
+
+    async waitUntilEmpty() {
+        return new Promise<void>((res) => {
+            this.events.on("empty", res);
+        });
     }
 }
