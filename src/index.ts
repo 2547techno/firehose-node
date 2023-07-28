@@ -2,12 +2,16 @@ import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import Express, { Request, Response, json } from "express";
 import { readFileSync } from "fs";
+import { getAllStreams } from "./lib/streams";
+import { EventEmitter } from "events";
+import { config } from "./lib/config";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 const connections: Connection[] = [];
 const connectionQueue = new Queue(500, 6_000);
 const suspendedChannels = new Set<string>();
+const listGenerator = new EventEmitter();
 
 const middleware = [json()];
 
@@ -59,14 +63,14 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("part", (channelName) => {
-        console.log(`\nPART #${channelName}`);
+        // console.log(`\nPART #${channelName}`);
         if (conn.getChannelCount() === 0) {
             connections.splice(connections.indexOf(conn), 1);
         }
     });
 
     conn.addListener("channelSuspended", (channelName) => {
-        console.log(`\nSUSPENDED #${channelName}`);
+        // console.log(`\nSUSPENDED #${channelName}`);
         suspendedChannels.add(channelName);
 
         if (conn.getChannelCount() === 0) {
@@ -114,4 +118,70 @@ if (process.env.FILE) {
     for (const channelName of channelNames) {
         connectionQueue.push(channelName);
     }
+}
+
+async function delay(ms: number) {
+    return new Promise<void>((res) => {
+        setTimeout(() => {
+            return res();
+        }, ms);
+    });
+}
+
+async function updateStreams() {
+    console.log("[STREAMS] Generating list of live streams");
+    const channelNames = await getAllStreams();
+    console.log(
+        "[STREAMS] Generated list of live streams | Count:",
+        channelNames.size
+    );
+
+    const connectedChannels = new Set<string>();
+    for (const conn of connections) {
+        for (const channel of conn.channels.keys()) {
+            connectedChannels.add(channel);
+        }
+    }
+    console.log("[STREAMS] Connected Channels:", connectedChannels.size);
+
+    const channelsToPart: string[] = [];
+    for (const connectedChannel of connectedChannels) {
+        if (!channelNames.has(connectedChannel)) {
+            channelsToPart.push(connectedChannel);
+        }
+    }
+    console.log("[STREAMS] Channels to part:", channelsToPart.length);
+
+    for (const conn of connections) {
+        conn.partChannels(channelsToPart);
+    }
+    console.log("[STREAMS] Parting", channelsToPart.length, "channels");
+
+    let count = 0;
+    for (const channelName of channelNames) {
+        if (!connectedChannels.has(channelName)) {
+            connectionQueue.push(channelName);
+            count++;
+        }
+    }
+    console.log("[STREAMS] Added", count, "channels to queue");
+}
+
+if (process.env.STANDALONE) {
+    const initalDelay = config.twitch.streamsDelay.initial;
+    const intervalDelay = config.twitch.streamsDelay.interval;
+
+    listGenerator.on("generate", async () => {
+        await updateStreams();
+        console.log(`[STREAMS] ${intervalDelay / 1000}s cooldown`);
+        await delay(intervalDelay);
+        listGenerator.emit("generate");
+    });
+
+    updateStreams()
+        .then(() => {
+            console.log(`[STREAMS] Initial cooldown ${initalDelay / 1000}s`);
+            return delay(initalDelay);
+        })
+        .then(() => listGenerator.emit("generate"));
 }
