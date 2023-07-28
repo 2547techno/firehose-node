@@ -11,7 +11,8 @@
         "lint:fix": "eslint --fix .",
         "format": "prettier . -w",
         "format:full": "npm run format && npm run lint:fix",
-        "build": "tsc"
+        "build": "tsc",
+        "deploy": "npm run build && pm2 restart firehose-node"
     },
     "keywords": [],
     "author": "",
