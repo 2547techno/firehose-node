@@ -24,11 +24,13 @@ export class Connection extends EventEmitter {
     events;
     ws;
     channels;
+    maxChannels;
 
-    constructor(channelNames: string[]) {
+    constructor(channelNames: string[], maxChannels: number) {
         super();
-        this.channels = new Map<string, Channel>();
+        this.maxChannels = maxChannels;
 
+        this.channels = new Map<string, Channel>();
         this.events = new EventEmitter();
 
         const ws = new WebSocket("wss://irc-ws.chat.twitch.tv", {
@@ -71,24 +73,7 @@ export class Connection extends EventEmitter {
             ws.send(`NICK ${auth.nick}`);
             ws.send("CAP REQ :twitch.tv/commands twitch.tv/tags");
 
-            for (const c of channelNames) {
-                const channelName = c.toLowerCase();
-                if (this.channels.has(channelName)) continue;
-                const channel = {
-                    name: channelName,
-                    state: JoinState.JOINING,
-                    messageCount: 0,
-                };
-                this.channels.set(channelName, channel);
-
-                ws.send(`JOIN #${channelName}`);
-
-                setTimeout(() => {
-                    if (channel.state !== JoinState.JOINED) {
-                        this.events.emit("channelTimeout", channelName);
-                    }
-                }, 10_000);
-            }
+            this.joinChannels(channelNames);
         });
 
         ws.on("error", console.error);
@@ -114,6 +99,7 @@ export class Connection extends EventEmitter {
                     case "USERNOTICE":
                     case "CLEARCHAT":
                     case "CLEARMSG":
+                    case "PONG":
                     case "001":
                     case "002":
                     case "003":
@@ -179,6 +165,39 @@ export class Connection extends EventEmitter {
         for (const channelName of channelNames) {
             this.partChannel(channelName);
         }
+    }
+
+    joinChannel(channelName: string) {
+        if (this.channels.size >= this.maxChannels) {
+            this.partChannel(Array.from(this.channels.keys())[0]);
+        }
+
+        channelName = channelName.toLowerCase();
+        if (this.channels.has(channelName)) return;
+        const channel = {
+            name: channelName,
+            state: JoinState.JOINING,
+            messageCount: 0,
+        };
+        this.channels.set(channelName, channel);
+
+        this.ws.send(`JOIN #${channelName}`);
+
+        setTimeout(() => {
+            if (channel.state !== JoinState.JOINED) {
+                this.events.emit("channelTimeout", channelName);
+            }
+        }, 10_000);
+    }
+
+    joinChannels(channelNames: string[]) {
+        for (const channelName of channelNames) {
+            this.joinChannel(channelName);
+        }
+    }
+
+    ping() {
+        this.ws.send("PING :firehose");
     }
 }
 

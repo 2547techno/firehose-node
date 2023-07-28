@@ -8,8 +8,9 @@ import { config } from "./lib/config";
 
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
+const MAX_CHANNELS_PER_CONNECTIONS = 500;
 const connections: Connection[] = [];
-const connectionQueue = new Queue(500, 6_000);
+const connectionQueue = new Queue(MAX_CHANNELS_PER_CONNECTIONS, 6_000);
 const suspendedChannels = new Set<string>();
 const listGenerator = new EventEmitter();
 
@@ -50,7 +51,15 @@ app.listen(PORT, () => {
 });
 
 connectionQueue.addListener("batch", (batch: string[]) => {
-    const conn = new Connection(batch);
+    for (const connection of connections) {
+        const space = connection.maxChannels - connection.channels.size;
+
+        connection.joinChannels(batch.splice(0, space));
+    }
+
+    if (batch.length === 0) return;
+
+    const conn = new Connection(batch, MAX_CHANNELS_PER_CONNECTIONS);
 
     conn.addListener("close", ({ code }) => {
         const i = connections.indexOf(conn);
@@ -111,6 +120,15 @@ setInterval(() => {
     );
 }, 5_000);
 
+setInterval(() => {
+    console.log(
+        `\n[CONNECTIONS] Sending pings for ${connections.length} clients`
+    );
+    for (const conn of connections) {
+        conn.ping();
+    }
+}, 60_000 * 5);
+
 if (process.env.FILE) {
     console.log("[FILE] Load channels file:", process.env.FILE);
     const file = readFileSync(process.env.FILE);
@@ -142,7 +160,6 @@ async function updateStreams() {
             connectedChannels.add(channel);
         }
     }
-    console.log("[STREAMS] Connected Channels:", connectedChannels.size);
 
     const channelsToPart: string[] = [];
     for (const connectedChannel of connectedChannels) {
@@ -150,7 +167,6 @@ async function updateStreams() {
             channelsToPart.push(connectedChannel);
         }
     }
-    console.log("[STREAMS] Channels to part:", channelsToPart.length);
 
     for (const conn of connections) {
         conn.partChannels(channelsToPart);

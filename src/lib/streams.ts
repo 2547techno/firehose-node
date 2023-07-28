@@ -4,7 +4,8 @@ import { config } from "./config";
 
 const token = config.twitch.token;
 const cid = config.twitch.cid;
-const CHANNEL_LIMIT = 150000;
+// const CHANNEL_LIMIT = 150000;
+const CHANNEL_LIMIT = 2000;
 
 async function getStreams(cursor: string) {
     const url = new URL("https://api.twitch.tv/helix/streams");
