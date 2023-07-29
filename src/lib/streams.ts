@@ -35,9 +35,13 @@ export async function getAllStreams() {
     const channels = [];
     while (channels.length < CHANNEL_LIMIT) {
         const streamsRes = await getStreams(cursor);
+        if (!streamsRes.ok) {
+            console.log("[STREAMS] Get list status:", streamsRes.status);
+            break;
+        }
 
         const json = await streamsRes.json();
-        cursor = json.pagination.cursor;
+        cursor = json.pagination?.cursor;
         for (const ch of json.data) {
             channels.push(ch.user_login);
         }
