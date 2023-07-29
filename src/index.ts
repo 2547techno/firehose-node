@@ -83,7 +83,10 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     if (batch.length === 0) return;
 
-    const conn = new Connection(batch, MAX_CHANNELS_PER_CONNECTIONS);
+    const conn = new Connection(batch, MAX_CHANNELS_PER_CONNECTIONS, {
+        username: config.twitch.username,
+        password: `oauth:${config.twitch.token}`,
+    });
 
     conn.addListener("close", ({ code }) => {
         const i = connections.indexOf(conn);
@@ -96,7 +99,9 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("part", (channelName) => {
-        console.log(`\nPART #${channelName}`);
+        if (config.connections.print.part) {
+            console.log(`\nPART #${channelName}`);
+        }
         if (conn.getChannelCount() === 0) {
             connections.splice(connections.indexOf(conn), 1);
         }

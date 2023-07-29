@@ -21,15 +21,22 @@ type Channel = {
     messageCount: number;
 };
 
+type Auth = {
+    username: string;
+    password: string;
+};
+
 export class Connection extends EventEmitter {
     events;
     ws;
     channels;
     maxChannels;
+    auth;
 
-    constructor(channelNames: string[], maxChannels: number) {
+    constructor(channelNames: string[], maxChannels: number, auth: Auth) {
         super();
         this.maxChannels = maxChannels;
+        this.auth = auth;
 
         this.channels = new Map<string, Channel>();
         this.events = new EventEmitter();
@@ -66,12 +73,16 @@ export class Connection extends EventEmitter {
         });
 
         ws.on("open", async () => {
-            const auth = {
-                nick: "justinfan123",
-                pass: "",
-            };
+            if (config.connections.anon) {
+                this.auth = {
+                    username: "justinfan123",
+                    password: "",
+                };
+            } else {
+                ws.send(`PASS ${this.auth.password}`);
+            }
 
-            ws.send(`NICK ${auth.nick}`);
+            ws.send(`NICK ${this.auth.username}`);
             ws.send("CAP REQ :twitch.tv/commands twitch.tv/tags");
 
             this.joinChannels(channelNames);
@@ -97,6 +108,7 @@ export class Connection extends EventEmitter {
                 switch (message.command) {
                     case "CAP":
                     case "ROOMSTATE":
+                    case "USERSTATE":
                     case "USERNOTICE":
                     case "CLEARCHAT":
                     case "CLEARMSG":
