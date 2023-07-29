@@ -270,7 +270,11 @@ export class Queue extends EventEmitter {
 
     async waitUntilEmpty() {
         return new Promise<void>((res) => {
-            this.events.on("empty", res);
+            const cb = () => {
+                this.events.removeListener("empty", cb);
+                res();
+            };
+            this.events.on("empty", cb);
         });
     }
 }
