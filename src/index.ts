@@ -17,6 +17,7 @@ const connectionQueue = new Queue(
     config.connections.queueInterval
 );
 const suspendedChannels = new Set<string>();
+const channelsBannedIn = new Set<string>();
 const messageEvent = new EventEmitter();
 
 const middleware = [json()];
@@ -120,8 +121,19 @@ connectionQueue.addListener("batch", (batch: string[]) => {
         }, 60_000);
     });
 
+    conn.addListener("banned", (channelName) => {
+        if (config.connections.print.banned) {
+            console.log(`\nBANNED #${channelName}`);
+        }
+        channelsBannedIn.add(channelName);
+    });
+
     conn.addListener("channelTimeout", (channelName) => {
-        if (suspendedChannels.has(channelName)) return;
+        if (
+            suspendedChannels.has(channelName) ||
+            channelsBannedIn.has(channelName)
+        )
+            return;
         console.log(`\nTIMEOUT #${channelName}`);
 
         if (conn.getChannelCount() === 0) {

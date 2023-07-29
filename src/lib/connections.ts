@@ -63,6 +63,11 @@ export class Connection extends EventEmitter {
             this.emit("channelSuspended", channelName);
         });
 
+        this.events.on("banned", (channelName) => {
+            this.channels.delete(channelName);
+            this.emit("banned", channelName);
+        });
+
         this.events.on("channelTimeout", (channelName) => {
             this.channels.delete(channelName);
             this.emit("channelTimeout", channelName);
@@ -144,6 +149,8 @@ export class Connection extends EventEmitter {
                                 "channelSuspended",
                                 message.param.slice(1)
                             );
+                        } else if (message.tags["msg-id"] === "msg_banned") {
+                            this.events.emit("banned", message.param.slice(1));
                         }
                         break;
                     }
