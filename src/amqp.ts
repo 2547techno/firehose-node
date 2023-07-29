@@ -1,30 +1,18 @@
-import amqplib from "amqplib/callback_api";
+import amqplib from "amqplib";
 import { config } from "./lib/config";
 import { EventEmitter } from "events";
 const QUEUE_NAME = config.amqp.queueName;
 export const messageEvent = new EventEmitter();
 
-export function initAMQP() {
-    return new Promise<void>((res) => {
-        amqplib.connect(
-            `amqp://${config.amqp.user}:${config.amqp.password}@${config.amqp.url}`,
-            (err, conn: amqplib.Connection) => {
-                if (err) throw err;
-                console.log("[AMQP] Connected to server");
+export async function initAMQP() {
+    const conn = await amqplib.connect(
+        `amqp://${config.amqp.user}:${config.amqp.password}@${config.amqp.url}`
+    );
 
-                conn.createChannel((err, channel: amqplib.Channel) => {
-                    if (err) throw err;
-                    console.log("[AMQP] Connected to queue", QUEUE_NAME);
+    const channel = await conn.createChannel();
+    await channel.assertQueue(QUEUE_NAME);
 
-                    channel.assertQueue(QUEUE_NAME);
-
-                    messageEvent.on("message", (message: string) => {
-                        channel.sendToQueue(QUEUE_NAME, Buffer.from(message));
-                    });
-
-                    res();
-                });
-            }
-        );
+    messageEvent.on("message", (message: string) => {
+        channel.sendToQueue(QUEUE_NAME, Buffer.from(message));
     });
 }
