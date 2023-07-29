@@ -127,9 +127,9 @@ function loadEnvFunctions() {
     }
 }
 
-function main() {
-    initREST();
-    initAMQP();
+async function main() {
+    await initREST();
+    await initAMQP();
     initIntervals();
     loadEnvFunctions();
 }

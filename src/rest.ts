@@ -36,7 +36,10 @@ app.delete("/channels", middleware, (req: Request, res: Response) => {
 });
 
 export function initREST() {
-    app.listen(PORT, () => {
-        console.log(`[EXPRESS] Listening on ${PORT}`);
-    });
+    return new Promise<void>(res => {
+        app.listen(PORT, () => {
+            console.log(`[EXPRESS] Listening on ${PORT}`);
+            res();
+        });
+    })
 }
