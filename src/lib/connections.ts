@@ -117,6 +117,7 @@ export class Connection extends EventEmitter {
                     case "USERNOTICE":
                     case "CLEARCHAT":
                     case "CLEARMSG":
+                    case "WHISPER":
                     case "PONG":
                     case "001":
                     case "002":
