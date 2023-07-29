@@ -69,10 +69,10 @@ export async function updateStreams() {
         liveChannels = await getAllStreams();
     }
 }
-        
+
 export async function joinPartDiffStreams() {
     // eslint-disable-next-line no-constant-condition
-    while(true) {
+    while (true) {
         console.log("[STREAMS] Live channels:", liveChannels.size);
         const connectedChannels = new Set<string>();
         for (const conn of connections) {
@@ -103,5 +103,5 @@ export async function joinPartDiffStreams() {
         console.log("[STREAMS] Added", count, "channels to queue");
         await connectionQueue.waitUntilEmpty();
         console.log("[STREAMS] Queue empty");
-    }          
+    }
 }
