@@ -30,19 +30,19 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     conn.addListener("close", ({ code }) => {
         const i = connections.indexOf(conn);
-        console.log(`\n[CONNECTION] Close connections[${i}] | code: ${code}`);
+        console.log(`[CONNECTION] Close connections[${i}] | code: ${code}`);
         connections.splice(i, 1);
     });
 
     conn.addListener("join", (channelName) => {
         if (config.connections.print.join) {
-            console.log(`\nJOINED #${channelName}`);
+            console.log(`JOINED #${channelName}`);
         }
     });
 
     conn.addListener("part", (channelName) => {
         if (config.connections.print.part) {
-            console.log(`\nPART #${channelName}`);
+            console.log(`PART #${channelName}`);
         }
         if (conn.getChannelCount() === 0) {
             connections.splice(connections.indexOf(conn), 1);
@@ -50,7 +50,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("channelSuspended", (channelName) => {
-        console.log(`\nSUSPENDED #${channelName}`);
+        console.log(`SUSPENDED #${channelName}`);
         suspendedChannels.add(channelName);
 
         if (conn.getChannelCount() === 0) {
@@ -64,7 +64,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     conn.addListener("banned", (channelName) => {
         if (config.connections.print.banned) {
-            console.log(`\nBANNED #${channelName}`);
+            console.log(`BANNED #${channelName}`);
         }
         channelsBannedIn.add(channelName);
     });
@@ -75,7 +75,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
             channelsBannedIn.has(channelName)
         )
             return;
-        console.log(`\nTIMEOUT #${channelName}`);
+        console.log(`TIMEOUT #${channelName}`);
 
         if (conn.getChannelCount() === 0) {
             connections.splice(connections.indexOf(conn), 1);
@@ -103,7 +103,7 @@ function initIntervals() {
 
     setInterval(() => {
         console.log(
-            `\n[CONNECTIONS] Sending pings for ${connections.length} clients`
+            `[CONNECTIONS] Sending pings for ${connections.length} clients`
         );
         for (const conn of connections) {
             conn.ping();
