@@ -171,13 +171,19 @@ export class Connection extends EventEmitter {
         this.ws = ws;
     }
 
+    send(str: string) {
+        if (this.ws.readyState === this.ws.OPEN) {
+            this.ws.send(str);
+        }
+    }
+
     getChannelCount() {
         return this.channels.size;
     }
 
     partChannel(channelName: string) {
         if (this.channels.has(channelName)) {
-            this.ws.send(`PART #${channelName.toLowerCase()}`);
+            this.send(`PART #${channelName.toLowerCase()}`);
         }
     }
 
@@ -201,7 +207,7 @@ export class Connection extends EventEmitter {
         };
         this.channels.set(channelName, channel);
 
-        this.ws.send(`JOIN #${channelName}`);
+        this.send(`JOIN #${channelName}`);
 
         setTimeout(() => {
             if (channel.state !== JoinState.JOINED) {
@@ -217,7 +223,7 @@ export class Connection extends EventEmitter {
     }
 
     ping() {
-        this.ws.send("PING :firehose");
+        this.send("PING :firehose");
     }
 }
 
