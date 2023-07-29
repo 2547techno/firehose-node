@@ -2,6 +2,7 @@ import { URLSearchParams } from "url";
 import { writeFileSync } from "fs";
 import { config } from "./config";
 import { connections, connectionQueue } from "..";
+export let liveChannels = new Set<string>();
 
 const TOKEN = config.twitch.token;
 const CID = config.twitch.cid;
@@ -65,13 +66,14 @@ export async function getAllStreams() {
 export async function updateStreams() {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        console.log("[STREAMS] Generating list of live streams");
-        const channelNames = await getAllStreams();
-        console.log(
-            "[STREAMS] Generated list of live streams | Count:",
-            channelNames.size
-        );
-
+        liveChannels = await getAllStreams();
+    }
+}
+        
+export async function joinPartDiffStreams() {
+    // eslint-disable-next-line no-constant-condition
+    while(true) {
+        console.log("[STREAMS] Live channels:", liveChannels.size);
         const connectedChannels = new Set<string>();
         for (const conn of connections) {
             for (const channel of conn.channels.keys()) {
@@ -81,7 +83,7 @@ export async function updateStreams() {
 
         const channelsToPart: string[] = [];
         for (const connectedChannel of connectedChannels) {
-            if (!channelNames.has(connectedChannel)) {
+            if (!liveChannels.has(connectedChannel)) {
                 channelsToPart.push(connectedChannel);
             }
         }
@@ -92,7 +94,7 @@ export async function updateStreams() {
         console.log("[STREAMS] Parting", channelsToPart.length, "channels");
 
         let count = 0;
-        for (const channelName of channelNames) {
+        for (const channelName of liveChannels) {
             if (!connectedChannels.has(channelName)) {
                 connectionQueue.push(channelName);
                 count++;
@@ -101,5 +103,5 @@ export async function updateStreams() {
         console.log("[STREAMS] Added", count, "channels to queue");
         await connectionQueue.waitUntilEmpty();
         console.log("[STREAMS] Queue empty");
-    }
+    }          
 }

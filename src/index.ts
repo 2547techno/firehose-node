@@ -1,7 +1,7 @@
 import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import { readFileSync } from "fs";
-import { updateStreams } from "./lib/streams";
+import { joinPartDiffStreams, updateStreams } from "./lib/streams";
 import { config } from "./lib/config";
 import { initAMQP, messageEvent } from "./amqp";
 import { initREST } from "./rest";
@@ -123,14 +123,15 @@ function loadEnvFunctions() {
 
     if (process.env.STANDALONE_LIST) {
         updateStreams();
+        joinPartDiffStreams();
     }
 }
 
 function main() {
     initREST();
     initAMQP();
-    loadEnvFunctions();
     initIntervals();
+    loadEnvFunctions();
 }
 
 main();
