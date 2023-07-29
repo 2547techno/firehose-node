@@ -1,6 +1,7 @@
 import { URLSearchParams } from "url";
 import { writeFileSync } from "fs";
 import { config } from "./config";
+import { connections, connectionQueue } from "..";
 
 const TOKEN = config.twitch.token;
 const CID = config.twitch.cid;
@@ -41,7 +42,6 @@ export async function getAllStreams() {
         }
 
         if (!cursor) {
-            console.log(json);
             break;
         }
     }
@@ -60,4 +60,46 @@ export async function getAllStreams() {
     writeFileSync("channels-current.txt", out.join("\n"));
     cursor = null;
     return set;
+}
+
+export async function updateStreams() {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        console.log("[STREAMS] Generating list of live streams");
+        const channelNames = await getAllStreams();
+        console.log(
+            "[STREAMS] Generated list of live streams | Count:",
+            channelNames.size
+        );
+
+        const connectedChannels = new Set<string>();
+        for (const conn of connections) {
+            for (const channel of conn.channels.keys()) {
+                connectedChannels.add(channel);
+            }
+        }
+
+        const channelsToPart: string[] = [];
+        for (const connectedChannel of connectedChannels) {
+            if (!channelNames.has(connectedChannel)) {
+                channelsToPart.push(connectedChannel);
+            }
+        }
+
+        for (const conn of connections) {
+            conn.partChannels(channelsToPart);
+        }
+        console.log("[STREAMS] Parting", channelsToPart.length, "channels");
+
+        let count = 0;
+        for (const channelName of channelNames) {
+            if (!connectedChannels.has(channelName)) {
+                connectionQueue.push(channelName);
+                count++;
+            }
+        }
+        console.log("[STREAMS] Added", count, "channels to queue");
+        await connectionQueue.waitUntilEmpty();
+        console.log("[STREAMS] Queue empty");
+    }
 }

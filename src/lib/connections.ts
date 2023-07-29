@@ -105,7 +105,6 @@ export class Connection extends EventEmitter {
         ws.on("message", (data) => {
             const d = data.toString();
             const msgs = d.split("\r\n");
-            // console.log(msgs);
             for (const msg of msgs) {
                 const message = parse(msg);
                 if (!message) continue;
