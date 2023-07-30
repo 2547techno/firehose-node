@@ -1,11 +1,12 @@
 import Express, { Request, Response, json } from "express";
-import { connectionQueue, connections } from ".";
+import { firehoseChannels } from "./lib/streams";
 const app = Express();
 const PORT = process.env.PORT ?? 3001;
 
 const middleware = [json()];
 
 app.post("/channels", middleware, (req: Request, res: Response) => {
+    console.log("[REST] POST /channels");
     const channelNames: string[] = req.body.channels;
     if (!channelNames) {
         return res.status(400).json({
@@ -14,13 +15,14 @@ app.post("/channels", middleware, (req: Request, res: Response) => {
     }
 
     for (const channelName of channelNames) {
-        connectionQueue.push(channelName);
+        firehoseChannels.add(channelName);
     }
 
     res.send();
 });
 
 app.delete("/channels", middleware, (req: Request, res: Response) => {
+    console.log("[REST] DELETE /channels");
     const channelNames: string[] = req.body.channels;
     if (!channelNames) {
         return res.status(400).json({
@@ -28,8 +30,8 @@ app.delete("/channels", middleware, (req: Request, res: Response) => {
         });
     }
 
-    for (const conn of connections) {
-        conn.partChannels(channelNames);
+    for (const channelName of channelNames) {
+        firehoseChannels.delete(channelName);
     }
 
     res.send();

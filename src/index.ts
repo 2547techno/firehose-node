@@ -1,7 +1,7 @@
 import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import { readFileSync } from "fs";
-import { joinPartDiffStreams, updateStreams } from "./lib/streams";
+import { joinPartDiffStreams, updateStreamsWithLive } from "./lib/streams";
 import { config } from "./lib/config";
 import { initAMQP, messageEvent } from "./amqp";
 import { initREST } from "./rest";
@@ -121,9 +121,9 @@ function loadEnvFunctions() {
         }
     }
 
-    if (process.env.STANDALONE_LIST) {
-        updateStreams();
-        joinPartDiffStreams();
+    if (process.env.STANDALONE_LIST?.toLowerCase() === "live") {
+        console.log("[LIST] Using standalone live list");
+        updateStreamsWithLive();
     }
 }
 
@@ -132,6 +132,7 @@ async function main() {
     await initAMQP();
     initIntervals();
     loadEnvFunctions();
+    joinPartDiffStreams();
 }
 
 main();

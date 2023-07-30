@@ -2,7 +2,7 @@ import { URLSearchParams } from "url";
 import { writeFileSync } from "fs";
 import { config } from "./config";
 import { connections, connectionQueue } from "..";
-export let liveChannels = new Set<string>();
+export let firehoseChannels = new Set<string>();
 
 const TOKEN = config.twitch.token;
 const CID = config.twitch.cid;
@@ -67,17 +67,17 @@ export async function getAllStreams() {
     return set;
 }
 
-export async function updateStreams() {
+export async function updateStreamsWithLive() {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        liveChannels = await getAllStreams();
+        firehoseChannels = await getAllStreams();
     }
 }
 
 export async function joinPartDiffStreams() {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        console.log("[STREAMS] Live channels:", liveChannels.size);
+        console.log("[STREAMS] Firehose channels:", firehoseChannels.size);
         const connectedChannels = new Set<string>();
         for (const conn of connections) {
             for (const channel of conn.channels.keys()) {
@@ -87,7 +87,7 @@ export async function joinPartDiffStreams() {
 
         const channelsToPart: string[] = [];
         for (const connectedChannel of connectedChannels) {
-            if (!liveChannels.has(connectedChannel)) {
+            if (!firehoseChannels.has(connectedChannel)) {
                 channelsToPart.push(connectedChannel);
             }
         }
@@ -98,7 +98,7 @@ export async function joinPartDiffStreams() {
         console.log("[STREAMS] Parting", channelsToPart.length, "channels");
 
         let count = 0;
-        for (const channelName of liveChannels) {
+        for (const channelName of firehoseChannels) {
             if (!connectedChannels.has(channelName)) {
                 connectionQueue.push(channelName);
                 count++;
@@ -106,6 +106,5 @@ export async function joinPartDiffStreams() {
         }
         console.log("[STREAMS] Added", count, "channels to queue");
         await connectionQueue.waitUntilEmpty();
-        console.log("[STREAMS] Queue empty");
     }
 }
