@@ -5,8 +5,8 @@ const PORT = process.env.PORT ?? 3001;
 
 const middleware = [json()];
 
-app.post("/channels", middleware, (req: Request, res: Response) => {
-    console.log("[REST] POST /channels");
+app.put("/channels", middleware, (req: Request, res: Response) => {
+    console.log("[REST] PUT /channels");
     const channelNames: string[] = req.body.channels;
     if (!channelNames) {
         return res.status(400).json({
