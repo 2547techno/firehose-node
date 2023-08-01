@@ -2,6 +2,8 @@ Required: [Firehose Aggregator](https://github.com/2547techno/firehose-aggregato
 
 Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
 
+![diagram](https://github.com/2547techno/firehose-node/assets/109011672/f5a4b51d-86ac-42e6-9ca0-a5ad460805f4)
+
 ## Config
 
 `config.json`
