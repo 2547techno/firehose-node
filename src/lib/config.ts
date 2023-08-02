@@ -1,5 +1,5 @@
 import c from "../../config.json";
-import { z } from "zod";
+import { ZodError, z } from "zod";
 
 const configSchema = z.object({
     nodeId: z.string(),
@@ -34,4 +34,14 @@ const configSchema = z.object({
         .optional(),
 });
 
-export const config = configSchema.parse(c);
+export let config: z.infer<typeof configSchema>;
+try {
+    config = configSchema.parse(c);
+} catch (err) {
+    const errors = (err as ZodError).issues.map(
+        (i) => `\`${i.path.join(".")}\` ${i.message}`
+    );
+    console.log("[ Config Error ]");
+    console.log(errors.map((error) => `→ ${error}`).join("\n"));
+    process.exit(1);
+}
