@@ -22,7 +22,7 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
         "password": "password", // rabbitmq password
         "queueName": {
             "message": "firehose-message", // queue name to push all messages to
-            "delegation": "firehose-delegation" // queue name to receive delegation messages from, if not in standalone list mode
+            "delegation": "firehose-delegation" // queue name to receive delegation messages from
         }
     },
     "rest": {
@@ -31,7 +31,7 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
     "connection": {
         "maxChannels": 500, // max channels per connection
         "queueInterval": 6000, // how long to wait before creating a new connection
-        "joinTimeout": 10000 // how long to wait after sending a JOIN to a channel
+        "joinTimeout": 10000 // how long to wait for a JOIN acknowledgement from a channel
     },
     "print": {
         // log options (optional)
