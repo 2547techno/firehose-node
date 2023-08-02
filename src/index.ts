@@ -121,7 +121,7 @@ function loadEnvFunctions() {
         }
     }
 
-    if (process.env.STANDALONE_LIST?.toLowerCase() === "live") {
+    if (config.twitch.list.max) {
         console.log("[LIST] Using standalone live list");
         updateStreamsWithLive();
     }

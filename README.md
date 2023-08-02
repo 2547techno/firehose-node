@@ -10,6 +10,7 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
 
 ```jsonc
 {
+    "nodeId": "node1foobar", // unique node id
     "twitch": {
         "username": "2547techno", // username used if not using anon connection
         "token": "xxx", // used as password for non-anon connection & token for standalone live list generation
@@ -27,6 +28,9 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
             "delegationQueue": "firehose-delegation" // queue name to receive delegation messages from, if not in standalone list mode
         }
     },
+    "rest": {
+        "port": 3001 // port REST API is served on
+    },
     "connections": {
         "anon": true, // connect to irc as anon or not
         "maxChannels": 500, // max channels per connection
@@ -42,18 +46,6 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
 ```
 
 ## Env
-
-### `PORT=<port>`
-
-REST API port
-
-### `NODE_ID=<node id>`
-
-unqiue ID of node, used for delegation. Must be defined if `STANDALONE_LIST` is not defined.
-
-### `STANDALONE_LIST=live`
-
-Constantly generate a list of live channels to join. Connection to delegation queue will not be created if used.
 
 ### `FILE=<filename>`
 

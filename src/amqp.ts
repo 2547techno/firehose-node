@@ -27,11 +27,11 @@ export async function initAMQP() {
         channel.sendToQueue(MESSAGE_QUEUE_NAME, Buffer.from(message));
     });
 
-    if (!process.env.STANDALONE_LIST) {
+    if (!config.twitch.list) {
         assert.notStrictEqual(
-            process.env.NODE_ID,
+            config.nodeId,
             undefined,
-            "NODE_ID needs to be defined when not in STANDALONE mode!"
+            "nodeId needs to be defined when not in STANDALONE mode!"
         );
 
         await channel.assertQueue(DELEGATION_QUEUE_NAME);
@@ -55,7 +55,7 @@ export async function initAMQP() {
 
 function updateFromDelegation(delegations: Delegation[]) {
     for (const delegation of delegations) {
-        if (delegation.id === process.env.NODE_ID) {
+        if (delegation.id === config.nodeId) {
             console.log("[DELEGATION] Updating channels from delegation");
             firehoseChannels.clear();
             for (const channelName of delegation.channelNames) {

@@ -1,7 +1,8 @@
 import Express, { Request, Response, json } from "express";
 import { firehoseChannels } from "./lib/streams";
+import { config } from "./lib/config";
 const app = Express();
-const PORT = process.env.PORT ?? 3001;
+const PORT = config.rest.port ?? 3001;
 
 const middleware = [json()];
 
