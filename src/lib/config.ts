@@ -4,8 +4,8 @@ import { z } from "zod";
 const configSchema = z.object({
     nodeId: z.string(),
     twitch: z.object({
-        username: z.string(),
-        token: z.string(),
+        username: z.string().optional(),
+        token: z.string().optional(),
         cid: z.string(),
     }),
     amqp: z.object({
@@ -21,7 +21,6 @@ const configSchema = z.object({
         port: z.number().int(),
     }),
     connection: z.object({
-        anon: z.boolean(),
         maxChannels: z.number().int(),
         queueInterval: z.number().int(),
         joinTimeout: z.number().int(),

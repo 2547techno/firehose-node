@@ -21,9 +21,9 @@ type Channel = {
     messageCount: number;
 };
 
-type Auth = {
+export type Auth = {
     username: string;
-    password: string;
+    password?: string;
 };
 
 export class Connection extends EventEmitter {
@@ -78,15 +78,9 @@ export class Connection extends EventEmitter {
         });
 
         ws.on("open", async () => {
-            if (config.connection.anon) {
-                this.auth = {
-                    username: "justinfan123",
-                    password: "",
-                };
-            } else {
+            if (this.auth.password) {
                 ws.send(`PASS ${this.auth.password}`);
             }
-
             ws.send(`NICK ${this.auth.username}`);
             ws.send("CAP REQ :twitch.tv/commands twitch.tv/tags");
 

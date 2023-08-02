@@ -1,4 +1,4 @@
-import { Connection, Queue } from "./lib/connections";
+import { Auth, Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import { readFileSync } from "fs";
 import { joinPartDiffStreams } from "./lib/streams";
@@ -14,6 +14,20 @@ export const connectionQueue = new Queue(
     MAX_CHANNELS_PER_CONNECTIONS,
     config.connection.queueInterval
 );
+let auth: Auth;
+if (!config.twitch.username || !config.twitch.token) {
+    auth = {
+        username: "justinfan123",
+    };
+    console.log("[AUTH] Anon Connection");
+} else {
+    auth = {
+        username: config.twitch.username,
+        password: `oauth:${config.twitch.token}`,
+    };
+    console.log("[AUTH] Using", config.twitch.username);
+}
+
 connectionQueue.addListener("batch", (batch: string[]) => {
     for (const connection of connections) {
         const space = connection.maxChannels - connection.channels.size;
@@ -23,10 +37,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     if (batch.length === 0) return;
 
-    const conn = new Connection(batch, MAX_CHANNELS_PER_CONNECTIONS, {
-        username: config.twitch.username,
-        password: `oauth:${config.twitch.token}`,
-    });
+    const conn = new Connection(batch, MAX_CHANNELS_PER_CONNECTIONS, auth);
 
     conn.addListener("close", ({ code }) => {
         const i = connections.indexOf(conn);

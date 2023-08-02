@@ -12,8 +12,8 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
 {
     "nodeId": "node1foobar", // unique node id
     "twitch": {
-        "username": "2547techno", // username used if not using anon connection
-        "token": "xxx", // used as password for non-anon connection
+        "username": "2547techno", // (optional) username used to connect to irc if token is defined, if undefined anon connection is used
+        "token": "xxx", // (optional) used in password for connection, if undefined anon connection is used
         "cid": "xxx" // client id of token
     },
     "amqp": {
@@ -29,7 +29,6 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
         "port": 3001 // port REST API is served on
     },
     "connection": {
-        "anon": true, // connect to irc as anon or not
         "maxChannels": 500, // max channels per connection
         "queueInterval": 6000, // how long to wait before creating a new connection
         "joinTimeout": 10000 // how long to wait after sending a JOIN to a channel
