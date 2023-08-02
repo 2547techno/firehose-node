@@ -46,7 +46,7 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
 
 ### `FILE=<filename>`
 
-Pre-load a list of channels to join on startup. Channel names are separated by newlines. Do not have trailing newlines at the nd of the file.
+Pre-load a list of channels to join on startup. Channel names are separated by newlines. Do not have trailing newlines at the end of the file.
 
 ```text
 channel1
