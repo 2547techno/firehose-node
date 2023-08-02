@@ -1,7 +1,7 @@
 import { Auth, Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import { readFileSync } from "fs";
-import { joinPartDiffStreams } from "./lib/streams";
+import { firehoseChannels, joinPartDiffStreams } from "./lib/streams";
 import { config } from "./lib/config";
 import { initAMQP, messageEvent } from "./amqp";
 import { initREST } from "./rest";
@@ -128,7 +128,7 @@ function loadEnv() {
         const file = readFileSync(process.env.FILE);
         const channelNames = file.toString().split("\n");
         for (const channelName of channelNames) {
-            connectionQueue.push(channelName);
+            firehoseChannels.add(channelName);
         }
     }
 }
