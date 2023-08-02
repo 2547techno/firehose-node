@@ -13,8 +13,7 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
     "nodeId": "node1foobar", // unique node id
     "twitch": {
         "username": "2547techno", // (optional) username used to connect to irc if token is defined, if undefined anon connection is used
-        "token": "xxx", // (optional) used in password for connection, if undefined anon connection is used
-        "cid": "xxx" // client id of token
+        "token": "xxx" // (optional) used in password for connection, if undefined anon connection is used
     },
     "amqp": {
         "url": "localhost", // rabbitmq url

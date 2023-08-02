@@ -6,7 +6,6 @@ const configSchema = z.object({
     twitch: z.object({
         username: z.string().optional(),
         token: z.string().optional(),
-        cid: z.string(),
     }),
     amqp: z.object({
         url: z.string(),
