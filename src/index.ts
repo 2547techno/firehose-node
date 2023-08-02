@@ -15,7 +15,7 @@ export const connectionQueue = new Queue(
     config.connection.queueInterval
 );
 let auth: Auth;
-if (!config.twitch.username || !config.twitch.token) {
+if (!config.twitch?.username || !config.twitch?.token) {
     auth = {
         username: "justinfan123",
     };
