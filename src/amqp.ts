@@ -1,10 +1,9 @@
 import amqplib from "amqplib";
 import { config } from "./lib/config";
 import { EventEmitter } from "events";
-import assert from "assert";
 import { firehoseChannels } from "./lib/streams";
-const MESSAGE_QUEUE_NAME = config.amqp.queueNames.messageQueue;
-const DELEGATION_QUEUE_NAME = config.amqp.queueNames.delegationQueue;
+const MESSAGE_QUEUE_NAME = config.amqp.queueName.message;
+const DELEGATION_QUEUE_NAME = config.amqp.queueName.delegation;
 export const messageEvent = new EventEmitter();
 
 type Delegation = {
@@ -27,30 +26,22 @@ export async function initAMQP() {
         channel.sendToQueue(MESSAGE_QUEUE_NAME, Buffer.from(message));
     });
 
-    if (!config.twitch.list) {
-        assert.notStrictEqual(
-            config.nodeId,
-            undefined,
-            "nodeId needs to be defined when not in STANDALONE mode!"
-        );
+    await channel.assertQueue(DELEGATION_QUEUE_NAME);
+    console.log("[AMQP] Connected to queue", DELEGATION_QUEUE_NAME);
 
-        await channel.assertQueue(DELEGATION_QUEUE_NAME);
-        console.log("[AMQP] Connected to queue", DELEGATION_QUEUE_NAME);
+    channel.consume(DELEGATION_QUEUE_NAME, (message) => {
+        if (!message) return;
 
-        channel.consume(DELEGATION_QUEUE_NAME, (message) => {
-            if (!message) return;
-
-            try {
-                const delegations: Delegation[] = JSON.parse(
-                    message.content.toString()
-                );
-                channel.ack(message);
-                updateFromDelegation(delegations);
-            } catch (err) {
-                console.log("[DELEGATION] Cannot parse delegation message");
-            }
-        });
-    }
+        try {
+            const delegations: Delegation[] = JSON.parse(
+                message.content.toString()
+            );
+            channel.ack(message);
+            updateFromDelegation(delegations);
+        } catch (err) {
+            console.log("[DELEGATION] Cannot parse delegation message");
+        }
+    });
 }
 
 function updateFromDelegation(delegations: Delegation[]) {

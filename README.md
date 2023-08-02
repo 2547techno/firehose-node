@@ -13,34 +13,32 @@ Optional: [Firehose Delegator](https://github.com/2547techno/firehose-delegator)
     "nodeId": "node1foobar", // unique node id
     "twitch": {
         "username": "2547techno", // username used if not using anon connection
-        "token": "xxx", // used as password for non-anon connection & token for standalone live list generation
-        "cid": "xxx", // client id of token
-        "list": {
-            "max": 200000 // max (very rough) channels in generated live list
-        }
+        "token": "xxx", // used as password for non-anon connection
+        "cid": "xxx" // client id of token
     },
     "amqp": {
         "url": "localhost", // rabbitmq url
         "user": "user", // rabbitmq username
         "password": "password", // rabbitmq password
-        "queueNames": {
-            "messageQueue": "firehose-message", // queue name to push all messages to
-            "delegationQueue": "firehose-delegation" // queue name to receive delegation messages from, if not in standalone list mode
+        "queueName": {
+            "message": "firehose-message", // queue name to push all messages to
+            "delegation": "firehose-delegation" // queue name to receive delegation messages from, if not in standalone list mode
         }
     },
     "rest": {
         "port": 3001 // port REST API is served on
     },
-    "connections": {
+    "connection": {
         "anon": true, // connect to irc as anon or not
         "maxChannels": 500, // max channels per connection
         "queueInterval": 6000, // how long to wait before creating a new connection
-        "joinTimeout": 10000, // how long to wait after sending a JOIN to a channel
-        "print": {
-            "part": false, // log PARTs
-            "join": false, // log JOINs
-            "banned": false // log suspended channels
-        }
+        "joinTimeout": 10000 // how long to wait after sending a JOIN to a channel
+    },
+    "print": {
+        // log options (optional)
+        "part": true, // log PARTs
+        "join": true, // log JOINs
+        "banned": true // log suspended channels
     }
 }
 ```

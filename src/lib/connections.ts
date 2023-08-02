@@ -78,7 +78,7 @@ export class Connection extends EventEmitter {
         });
 
         ws.on("open", async () => {
-            if (config.connections.anon) {
+            if (config.connection.anon) {
                 this.auth = {
                     username: "justinfan123",
                     password: "",
@@ -213,7 +213,7 @@ export class Connection extends EventEmitter {
             if (channel.state !== JoinState.JOINED) {
                 this.events.emit("channelTimeout", channelName);
             }
-        }, config.connections.joinTimeout);
+        }, config.connection.joinTimeout);
     }
 
     joinChannels(channelNames: string[]) {

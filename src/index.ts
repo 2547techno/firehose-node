@@ -1,18 +1,18 @@
 import { Connection, Queue } from "./lib/connections";
 import { IRCMessage } from "irc-message-ts";
 import { readFileSync } from "fs";
-import { joinPartDiffStreams, updateStreamsWithLive } from "./lib/streams";
+import { joinPartDiffStreams } from "./lib/streams";
 import { config } from "./lib/config";
 import { initAMQP, messageEvent } from "./amqp";
 import { initREST } from "./rest";
 
 const suspendedChannels = new Set<string>();
 const channelsBannedIn = new Set<string>();
-const MAX_CHANNELS_PER_CONNECTIONS = config.connections.maxChannels;
+const MAX_CHANNELS_PER_CONNECTIONS = config.connection.maxChannels;
 export const connections: Connection[] = [];
 export const connectionQueue = new Queue(
     MAX_CHANNELS_PER_CONNECTIONS,
-    config.connections.queueInterval
+    config.connection.queueInterval
 );
 connectionQueue.addListener("batch", (batch: string[]) => {
     for (const connection of connections) {
@@ -35,13 +35,13 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("join", (channelName) => {
-        if (config.connections.print.join) {
+        if (config.print?.join) {
             console.log(`JOINED #${channelName}`);
         }
     });
 
     conn.addListener("part", (channelName) => {
-        if (config.connections.print.part) {
+        if (config.print?.part) {
             console.log(`PART #${channelName}`);
         }
         if (conn.getChannelCount() === 0) {
@@ -63,7 +63,7 @@ connectionQueue.addListener("batch", (batch: string[]) => {
     });
 
     conn.addListener("banned", (channelName) => {
-        if (config.connections.print.banned) {
+        if (config.print?.banned) {
             console.log(`BANNED #${channelName}`);
         }
         channelsBannedIn.add(channelName);
@@ -111,7 +111,7 @@ function initIntervals() {
     }, 60_000 * 5);
 }
 
-function loadEnvFunctions() {
+function loadEnv() {
     if (process.env.FILE) {
         console.log("[FILE] Load channels file:", process.env.FILE);
         const file = readFileSync(process.env.FILE);
@@ -120,18 +120,13 @@ function loadEnvFunctions() {
             connectionQueue.push(channelName);
         }
     }
-
-    if (config.twitch.list.max) {
-        console.log("[LIST] Using standalone live list");
-        updateStreamsWithLive();
-    }
 }
 
 async function main() {
     await initREST();
     await initAMQP();
+    loadEnv();
     initIntervals();
-    loadEnvFunctions();
     joinPartDiffStreams();
 }
 
