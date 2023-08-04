@@ -3,10 +3,12 @@ import { ZodError, z } from "zod";
 
 const configSchema = z.object({
     nodeId: z.string(),
-    twitch: z.object({
-        username: z.string().optional(),
-        token: z.string().optional(),
-    }).optional(),
+    twitch: z
+        .object({
+            username: z.string().optional(),
+            token: z.string().optional(),
+        })
+        .optional(),
     amqp: z.object({
         url: z.string(),
         user: z.string(),

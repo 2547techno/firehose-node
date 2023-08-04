@@ -6,6 +6,15 @@ import { config } from "./lib/config";
 import { initAMQP, messageEvent } from "./amqp";
 import { initREST } from "./rest";
 
+export const START_TIME = new Date().getTime();
+export const messages = {
+    total: 0,
+    rollingAverage: {
+        binSizeMs: 5000,
+        windowSize: 12,
+        window: [0],
+    },
+};
 const suspendedChannels = new Set<string>();
 const channelsBannedIn = new Set<string>();
 const MAX_CHANNELS_PER_CONNECTIONS = config.connection.maxChannels;
@@ -95,12 +104,25 @@ connectionQueue.addListener("batch", (batch: string[]) => {
 
     conn.addListener("PRIVMSG", (message: IRCMessage) => {
         messageEvent.emit("message", message.raw);
+        messages.total++;
+        const window = messages.rollingAverage.window;
+        if (window.length <= 0) return;
+
+        window[window.length - 1]++;
     });
 
     connections.push(conn);
 });
 
 function initIntervals() {
+    setInterval(() => {
+        const window = messages.rollingAverage.window;
+        if (window.length >= messages.rollingAverage.windowSize) {
+            window.splice(0, 1);
+        }
+        window.push(0);
+    }, messages.rollingAverage.binSizeMs);
+
     setInterval(() => {
         let channelCount = 0;
         for (const conn of connections) {
