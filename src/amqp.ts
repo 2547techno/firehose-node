@@ -19,14 +19,18 @@ export async function initAMQP() {
     console.log("[AMQP] Connected to server");
 
     const channel = await conn.createChannel();
-    await channel.assertQueue(MESSAGE_QUEUE_NAME);
+    await channel.assertQueue(MESSAGE_QUEUE_NAME, {
+        maxLength: 100,
+    });
     console.log("[AMQP] Connected to queue", MESSAGE_QUEUE_NAME);
 
     messageEvent.on("message", (message: string) => {
         channel.sendToQueue(MESSAGE_QUEUE_NAME, Buffer.from(message));
     });
 
-    await channel.assertQueue(DELEGATION_QUEUE_NAME);
+    await channel.assertQueue(DELEGATION_QUEUE_NAME, {
+        maxLength: 100,
+    });
     console.log("[AMQP] Connected to queue", DELEGATION_QUEUE_NAME);
 
     channel.consume(DELEGATION_QUEUE_NAME, (message) => {
